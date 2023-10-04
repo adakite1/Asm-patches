@@ -38,7 +38,7 @@
 .close
 
 .open "overlay_0036.bin", 0x023A7080
-.orga 0x30F70 ; Offset relative to the start of the overlay. This is where the common area begins.
+.orga 0x1840 ; Offset relative to the start of the overlay. This is where the common area begins.
 .area 0x48 ; So you don't accidentally overwrite something else
 GetPointerHookWrapper:
     ; r7 = index

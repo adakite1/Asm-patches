@@ -41,7 +41,7 @@ class PatchHandler(AbstractPatchHandler, DependantPatch):
 
     @property
     def author(self) -> str:
-        return 'adakite'
+        return 'Adakite'
 
     @property
     def version(self) -> str:
