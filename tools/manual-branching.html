@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manual ARM Branching Instructions Assembler</title>
 
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
@@ -47,7 +47,7 @@
             "cond-gt":      [0b1100, "GT Signed greater than (Z clear, and either N set and V set, or N clear and V clear (Z == 0, N == V))"],
             "cond-le":      [0b1101, "LE Signed less than or equal (Z set, or N set and V clear, or N clear and V set (Z == 1 or N != V))"],
             "cond-al":      [0b1110, "AL Always (unconditional)"],
-            "cond-1111":    [0b1111, "BLX (immediate)"]
+            "cond-1111":    [0b1111, "BLX (immediate) <b style='color: red;'>from ARM v5 and above only.</b>"]
         };
 
         function NumberValidator({number, setNumber, numberTxt, setNumberTxt}) {
@@ -100,7 +100,7 @@
                 let [val, desc] = TABLE[condType];
                 radioButtons.push(<div key={condType}>
                     <input type="radio" id={condType} name={condType} value={condType} checked={cond === condType} onChange={e => setCond(e.target.value)} />
-                    <label htmlFor={condType}>{val.toString(2).padStart(4, "0") + " " + desc}</label><br/>
+                    <label htmlFor={condType} dangerouslySetInnerHTML={{__html: val.toString(2).padStart(4, "0") + " " + desc}}></label><br/>
                 </div>);
             }
             return (
