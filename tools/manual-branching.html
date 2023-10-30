@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual ARM Branching Instructions Assembler</title>
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* .addr-display {
+            font-family: 'Courier New', Courier, monospace;
+        } */
+        .asm-txt {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: large;
+        }
+    </style>
+</head>
+<body>
+    <h3>Manual ARM Branching Instructions Assembler (b, bl, blx)</h3>
+    <span>
+        This tool helps generate pc-relative ARM branching instructions when automated tools are insufficient and it's easier to assemble them manually.
+    </span>
+    
+    <br/><br/>
+
+    <div id="app"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const TABLE = {
+            "cond-eq":      [0b0000, "EQ Equal (Z set)"],
+            "cond-ne":      [0b0001, "NE Not equal (Z clear)"],
+            "cond-cs-hs":   [0b0010, "CS/HS Carry set/unsigned higher or same (C set)"],
+            "cond-cc-lo":   [0b0011, "CC/LO Carry clear/unsigned lower (C clear)"],
+            "cond-mi":      [0b0100, "MI Minus/negative (N set)"],
+            "cond-pl":      [0b0101, "PL Plus/positive or zero (N clear)"],
+            "cond-vs":      [0b0110, "VS Overflow (V set)"],
+            "cond-vc":      [0b0111, "VC No overflow (V clear)"],
+            "cond-hi":      [0b1000, "HI Unsigned higher (C set and Z clear)"],
+            "cond-ls":      [0b1001, "LS Unsigned lower or same (C clear or Z set)"],
+            "cond-ge":      [0b1010, "GE Signed greater than or equal (N set and V set, or N clear and V clear (N == V))"],
+            "cond-lt":      [0b1011, "LT Signed less than (N set and V clear, or N clear and V set (N != V))"],
+            "cond-gt":      [0b1100, "GT Signed greater than (Z clear, and either N set and V set, or N clear and V clear (Z == 0, N == V))"],
+            "cond-le":      [0b1101, "LE Signed less than or equal (Z set, or N set and V clear, or N clear and V set (Z == 1 or N != V))"],
+            "cond-al":      [0b1110, "AL Always (unconditional)"],
+            "cond-1111":    [0b1111, "BLX (immediate)"]
+        };
+
+        function NumberValidator({number, setNumber, numberTxt, setNumberTxt}) {
+            const [error, setError] = useState(undefined);
+            useEffect(() => {
+                let newNum = undefined;
+                let numberTxtTrimmed = numberTxt.trim().toLowerCase().replace(" ", "");
+
+                if (numberTxtTrimmed === "") numberTxtTrimmed = "0";
+                if (numberTxtTrimmed === "-") numberTxtTrimmed = "0";
+
+                // Check if this is a binary number.
+                if (numberTxtTrimmed.startsWith("0b") || numberTxtTrimmed.startsWith("-0b") || numberTxtTrimmed.startsWith("+0b")) {
+                    newNum = parseInt(numberTxtTrimmed.replace("0b", ""), 2);
+                } else {
+                    newNum = parseInt(numberTxtTrimmed);
+                }
+
+                // Check if newNum is a number
+                if (typeof newNum === "number") {
+                    // Check if newNum is NaN
+                    if (!Number.isNaN(newNum)) {
+                        setNumber(newNum);
+                        setError();
+                    } else {
+                        setError("Failed to parse.");
+                        setNumber(undefined);
+                    }
+                } else {
+                    setError("Failed to parse.");
+                    setNumber(undefined);
+                }
+            }, [numberTxt]);
+
+            return (
+                <span>
+                    <input type="text" value={numberTxt} onInput={e => setNumberTxt(e.target.value)}></input>
+                    &nbsp;
+                    {error === undefined ?
+                        // <span className="addr-display">{"0x" + number.toString(16).padStart(8, "0")}</span> :
+                        <></> :
+                        <span style={{color: "red"}}>{error}</span>}
+                </span>
+            )
+        }
+
+        function ConditionalSelector({cond, setCond}) {
+            let radioButtons = [];
+            for (let condType of Object.keys(TABLE)) {
+                let [val, desc] = TABLE[condType];
+                radioButtons.push(<div key={condType}>
+                    <input type="radio" id={condType} name={condType} value={condType} checked={cond === condType} onChange={e => setCond(e.target.value)} />
+                    <label htmlFor={condType}>{val.toString(2).padStart(4, "0") + " " + desc}</label><br/>
+                </div>);
+            }
+            return (
+                <div>
+                    <span>Condition:</span>
+                    {radioButtons}
+                </div>
+            )
+        }
+
+        function Flag({cond, flag, setFlag}) {
+            return (
+                <span>
+                    {
+                        cond === "cond-1111" ? <></> :
+                        <>
+                            <input type="checkbox" id="flag" name="flag" checked={flag} onChange={e => setFlag(e.target.checked)} />
+                            <label htmlFor="flag">and link?</label>
+                        </>
+                    }
+                </span>
+            )
+        }
+
+        function Assembler({cond, flag, branchFrom, branchTo}) {
+            const [error, setError] = useState(undefined);
+            const [instruction, setInstruction] = useState(undefined);
+            
+            useEffect(() => {
+                setError();
+
+                let instruction = 0;
+
+                instruction += TABLE[cond][0] << 28;
+
+                branchFrom = branchFrom + 0x8;
+                let byteOffset = branchTo - branchFrom;
+                
+                if (byteOffset < -33554432) {
+                    setError("Cannot branch further than -0x2000000 bytes!");
+                } else if (byteOffset > (cond === "cond-1111" ? 33554430 : 33554428)) {
+                    setError("Cannot branch further than 0x1FFFFFC bytes!");
+                }
+
+                instruction += (byteOffset >>> 2) & 0xFFFFFF;
+
+                instruction += (0b1010 + (
+                    cond === "cond-1111" ? ((byteOffset << 22) >>> 23) : (flag ? 1 : 0)
+                )) << 24;
+
+                setInstruction(instruction);
+            }, [cond, flag, branchFrom, branchTo]);
+
+            return (
+                <div id="asm">
+                    Asm: {error === undefined ? <></> : <span style={{color: "red"}}>&nbsp;({error})</span>}<br/>
+                    <div className="asm-txt">{error === undefined ? "0b" + (instruction >>> 0).toString(2).padStart(32, "0") : "---"}</div>
+                    <div className="asm-txt">{error === undefined ? "0x" + (instruction >>> 0).toString(16).padStart(8, "0") : "---"}</div>
+                </div>
+            )
+        }
+
+        function App() {
+            const [branchFromTxt, setBranchFromTxt] = useState("0");
+            const [branchToTxt, setBranchToTxt] = useState("0");
+            const [cond, setCond] = useState("cond-al");
+            const [flag, setFlag] = useState(false);
+
+            const [branchFrom, setBranchFrom] = useState(0);
+            const [branchTo, setBranchTo] = useState(0);
+
+            return (
+                <div>
+                    <Assembler cond={cond} flag={flag} branchFrom={branchFrom} branchTo={branchTo} />
+
+                    <br/>
+
+                    Branch from <NumberValidator number={branchFrom} setNumber={setBranchFrom} numberTxt={branchFromTxt} setNumberTxt={setBranchFromTxt} />
+                    to <NumberValidator number={branchTo} setNumber={setBranchTo} numberTxt={branchToTxt} setNumberTxt={setBranchToTxt} />
+                    <button onClick={() => {
+                        let tmp = branchFromTxt;
+                        setBranchFromTxt(branchToTxt);
+                        setBranchToTxt(tmp);
+                    }}>&lt;=&gt;</button>
+                    <Flag cond={cond} flag={flag} setFlag={setFlag}></Flag>
+                    
+                    <br/><br/>
+
+                    <ConditionalSelector cond={cond} setCond={setCond}></ConditionalSelector>
+                </div>
+            )
+        }
+        ReactDOM.createRoot(document.getElementById('app')).render(<App />)
+    </script>
+</body>
+</html>
