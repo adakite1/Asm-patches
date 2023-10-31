@@ -1,4 +1,4 @@
-; FifoHooks
+; FifoHooks v1.0.0
 ; Fifo hooks for easy IPC with the arm7 sub-processor.
 ; The hook is enabled at the same time as hook 0x7, which is the audio events hook.
 ; Reserves event type 18 (0x12).
@@ -18,6 +18,12 @@
 .nds
 
 .definelabel EventType, 0x12
+
+; This is included for reference. These are the APIs for pushing events over the IPC.
+; After branching, they will return a negative value if an error occurred, or zero on success, so the usual way
+; to ensure a message is sent is to loop until it returns zero.
+.definelabel PushToFifoArm7, 0x37FE448
+.definelabel PushFormattedMessageToFifoArm9, 0x0207db20
 
 .definelabel Arm9RegisterFifoCallbackHook, 0x207D284
 .definelabel RegisterIpcEventTypeCallback_Arm9, 0x207DAB0
