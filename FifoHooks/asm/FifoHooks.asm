@@ -112,11 +112,11 @@ arm7_register_callback_return:
 
         ; b CallbackCommon
     CallbackCommon:
-        mov r4,r1
         ; Check if the flag is set, in which case read an address from "upperbits".
         cmp r2,1h
-        moveq lr,pc
-        ldreq pc,[r4]
+        add lr,pc,#0x4
+        movne pc,r1
+        ldreq pc,[r1]
         ; ldreq r4,[r4]
         ; blx r4 ; Unsupported by ARM v4t
 
