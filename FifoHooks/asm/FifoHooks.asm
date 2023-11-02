@@ -1,4 +1,4 @@
-; FifoHooks v1.0.0
+; FifoHooks v1.0.1
 ; Fifo hooks for easy IPC with the arm7 sub-processor.
 ; The hook is enabled at the same time as hook 0x7, which is the audio events hook.
 ; Reserves event type 18 (0x12).
