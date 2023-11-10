@@ -1,0 +1,16 @@
+<PMD2>
+  <ASMPatchesConstants>
+    <Patches>
+      <Game id="EoS_NA" id2="EoS_EU" id3="EoS_JP">
+        <SimplePatch id="FifoHooks">
+          <Include filename="FifoHooks.asm"/>
+          <Replace filename="regionSelect.asm" regexp='_REGION equ "(\w+)"'>
+            <Game id="EoS_NA" replace='_REGION equ "US"'/>
+            <Game id="EoS_EU" replace='_REGION equ "EU"'/>
+            <Game id="EoS_JP" replace='_REGION equ "JP"'/>
+          </Replace>
+        </SimplePatch>
+      </Game>
+    </Patches>
+  </ASMPatchesConstants>
+</PMD2>
